@@ -371,35 +371,60 @@ elif page == "📜 Historial":
 # --- PAGE: Configuración ---
 else:
     st.title("⚙️ Configuración")
-    st.markdown("""
-    ### 📌 Instrucciones de configuración
     
-    Para que la app funcione correctamente, necesitas configurar:
+    st.markdown("### 📌 Instrucciones de configuración")
+    st.markdown("Para que la app funcione correctamente, necesitas configurar:")
+    st.markdown("1. **Google Cloud Vision API** (para OCR)")
+    st.markdown("2. **Google Sheets API** (para guardar datos)")
+    st.markdown("")
     
-    1. **Google Cloud Vision API** (para OCR)
-    2. **Google Sheets API** (para guardar datos)
+    st.markdown("#### 🔑 Google Cloud Vision API")
+    st.markdown("1. Ve a [Google Cloud Console](https://console.cloud.google.com/)")
+    st.markdown("2. Crea un proyecto o selecciona uno existente")
+    st.markdown("3. Habilita la API de Cloud Vision")
+    st.markdown("4. Crea una clave de cuenta de servicio (JSON)")
+    st.markdown("5. Copia el contenido del JSON en los secrets de Streamlit como `GCP_CREDENTIALS`")
+    st.markdown("")
     
-    #### 🔑 Google Cloud Vision API
-    1. Ve a [Google Cloud Console](https://console.cloud.google.com/)
-    2. Crea un proyecto o selecciona uno existente
-    3. Habilita la API de Cloud Vision
-    4. Crea una clave de cuenta de servicio (JSON)
-    5. Copia el contenido del JSON en los secrets de Streamlit como `GCP_CREDENTIALS`
+    st.markdown("#### 📊 Google Sheets API")
+    st.markdown("1. Habilita Google Sheets API en la misma consola")
+    st.markdown("2. Crea otra clave de cuenta de servicio o usa la misma")
+    st.markdown("3. Copia el JSON como `GSHEET_CREDENTIALS` en los secrets")
+    st.markdown("")
     
-    #### 📊 Google Sheets API
-    1. Habilita Google Sheets API en la misma consola
-    2. Crea otra clave de cuenta de servicio o usa la misma
-    3. Copia el JSON como `GSHEET_CREDENTIALS` en los secrets
+    st.markdown("#### 🚀 Despliegue en Streamlit Cloud")
+    st.markdown("1. Sube este código a GitHub")
+    st.markdown("2. Ve a [share.streamlit.io](https://share.streamlit.io/)")
+    st.markdown("3. Conecta tu repositorio y despliega")
+    st.markdown("4. Agrega los secrets en la sección de configuración")
+    st.markdown("")
     
-    #### 🚀 Despliegue en Streamlit Cloud
-    1. Sube este código a GitHub
-    2. Ve a [share.streamlit.io](https://share.streamlit.io/)
-    3. Conecta tu repositorio y despliega
-    4. Agrega los secrets en la sección de configuración
+    st.markdown("### 🔐 Secrets (ejemplo)")
+    st.code("""
+{
+    "GCP_CREDENTIALS": { "type": "service_account", ... },
+    "GSHEET_CREDENTIALS": { "type": "service_account", ... }
+}
+    """, language="json")
     
-    ### 🔐 Secrets (ejemplo)
-    ```json
-    {
-        "GCP_CREDENTIALS": { "type": "service_account", ... },
-        "GSHEET_CREDENTIALS": { "type": "service_account", ... }
-    }
+    st.markdown("### 📱 Uso desde el celular")
+    st.markdown("Abre la URL de la app en tu navegador móvil y funciona como una app nativa.")
+    
+    st.markdown("---")
+    st.subheader("📡 Estado de conexiones")
+    
+    if worksheet:
+        st.success("✅ Google Sheets: Conectado")
+    else:
+        st.error("❌ Google Sheets: No conectado (configura los secrets)")
+    
+    # Test Vision API
+    try:
+        from utils.ocr import get_vision_client
+        client = get_vision_client()
+        if client:
+            st.success("✅ Google Cloud Vision API: Conectado")
+        else:
+            st.error("❌ Google Cloud Vision API: No conectado")
+    except:
+        st.error("❌ Google Cloud Vision API: Error de configuración")
