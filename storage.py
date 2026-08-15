@@ -7,7 +7,6 @@ from datetime import datetime
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
 def get_gsheet_client():
-    """Initialize Google Sheets client using credentials from secrets or file."""
     try:
         if "GSHEET_CREDENTIALS" in st.secrets:
             creds_dict = st.secrets["GSHEET_CREDENTIALS"]
@@ -17,7 +16,6 @@ def get_gsheet_client():
                 st.secrets["GSHEET_CREDENTIALS_FILE"], SCOPE
             )
         else:
-            # Try local file
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials_gsheet.json", SCOPE)
         client = gspread.authorize(creds)
         return client
@@ -26,25 +24,17 @@ def get_gsheet_client():
         return None
 
 def get_or_create_sheet(spreadsheet_name="Electricity Billing", sheet_name="Readings"):
-    """Get or create the spreadsheet and worksheet."""
     client = get_gsheet_client()
     if client is None:
         return None
-    
     try:
-        # Try to open existing spreadsheet
         sh = client.open(spreadsheet_name)
     except gspread.SpreadsheetNotFound:
-        # Create new spreadsheet
         sh = client.create(spreadsheet_name)
-        # Share with your email (optional)
-        # sh.share('your-email@gmail.com', perm_type='user', role='writer')
-    
     try:
         worksheet = sh.worksheet(sheet_name)
     except gspread.WorksheetNotFound:
         worksheet = sh.add_worksheet(title=sheet_name, rows="100", cols="20")
-        # Add headers
         headers = [
             "Fecha", "Depto F - Lectura Anterior", "Depto F - Lectura Actual",
             "Depto G - Lectura Anterior", "Depto G - Lectura Actual",
@@ -54,7 +44,6 @@ def get_or_create_sheet(spreadsheet_name="Electricity Billing", sheet_name="Read
             "Notas"
         ]
         worksheet.append_row(headers)
-    
     return worksheet
 
 def save_reading(
@@ -66,10 +55,8 @@ def save_reading(
     cost_f, cost_g, total_bill,
     notes=""
 ):
-    """Save a reading record to Google Sheets."""
     if worksheet is None:
         return False
-    
     row = [
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         f_previous, f_current,
@@ -87,15 +74,12 @@ def save_reading(
         return False
 
 def get_last_readings(worksheet):
-    """Fetch the most recent reading from Google Sheets."""
     if worksheet is None:
         return None
-    
     try:
         records = worksheet.get_all_records()
         if not records:
             return None
-        # Last record is the most recent
         last = records[-1]
         return {
             "f_previous": last.get("Depto F - Lectura Anterior", 0),
@@ -110,10 +94,8 @@ def get_last_readings(worksheet):
         return None
 
 def get_history(worksheet, limit=20):
-    """Get historical records as a DataFrame."""
     if worksheet is None:
         return pd.DataFrame()
-    
     try:
         records = worksheet.get_all_records()
         if not records:
