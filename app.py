@@ -1,27 +1,29 @@
 import streamlit as st
 from PIL import Image
-import io
 import pandas as pd
+from datetime import datetime
 
-# Import utils
+# Importar utilidades propias
 from utils.ocr import process_meter_image, extract_total_amount_from_bill
 from utils.calculations import calculate_bill, generate_report
 from utils.storage import get_or_create_sheet, save_reading, get_last_readings, get_history
 
-# Page config - must be first
+# ============================================
+# CONFIGURACIÓN DE LA PÁGINA
+# ============================================
 st.set_page_config(
-    page_title="📊 Gestión de Electricidad",
+    page_title="⚡ Gestión de Electricidad",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for mobile-friendliness
+# ============================================
+# ESTILOS CSS PARA MÓVIL
+# ============================================
 st.markdown("""
 <style>
-    .main > div {
-        padding: 0.5rem 1rem;
-    }
+    .main > div { padding: 0.5rem 1rem; }
     .stButton > button {
         width: 100%;
         padding: 0.75rem;
@@ -44,25 +46,16 @@ st.markdown("""
         white-space: pre-wrap;
         font-size: 0.95rem;
     }
-    .highlight {
-        background-color: #fff3cd;
-        padding: 0.5rem;
-        border-radius: 6px;
-        border: 1px solid #ffc107;
-    }
     @media (max-width: 600px) {
-        .report-box {
-            font-size: 0.8rem;
-            padding: 1rem;
-        }
-        .stApp {
-            padding: 0.2rem;
-        }
+        .report-box { font-size: 0.8rem; padding: 1rem; }
+        .stApp { padding: 0.2rem; }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Session state initialization
+# ============================================
+# INICIALIZACIÓN DEL ESTADO DE SESIÓN
+# ============================================
 if 'readings' not in st.session_state:
     st.session_state.readings = {
         'f_previous': 0, 'f_current': None,
@@ -72,29 +65,33 @@ if 'readings' not in st.session_state:
     }
 if 'result' not in st.session_state:
     st.session_state.result = None
-if 'history_df' not in st.session_state:
-    st.session_state.history_df = None
 
-# Sidebar navigation
-st.sidebar.title("⚡ Navegación")
-page = st.sidebar.radio(
-    "Ir a:",
-    ["📝 Nueva Lectura", "📜 Historial", "⚙️ Configuración"]
-)
-
-# Initialize Google Sheets connection
+# ============================================
+# CONEXIÓN A GOOGLE SHEETS (cacheada)
+# ============================================
 @st.cache_resource
 def init_gsheet():
     return get_or_create_sheet()
 
 worksheet = init_gsheet()
 
-# --- PAGE: Nueva Lectura ---
+# ============================================
+# BARRA LATERAL DE NAVEGACIÓN
+# ============================================
+st.sidebar.title("⚡ Navegación")
+page = st.sidebar.radio(
+    "Ir a:",
+    ["📝 Nueva Lectura", "📜 Historial", "⚙️ Configuración"]
+)
+
+# ============================================
+# PÁGINA: NUEVA LECTURA
+# ============================================
 if page == "📝 Nueva Lectura":
     st.title("📝 Nueva Lectura de Medidores")
     st.markdown("Sube las fotos de los medidores y la boleta, o ingresa los valores manualmente.")
     
-    # Try to load previous readings from Google Sheets
+    # Cargar la última lectura desde Google Sheets
     if worksheet and st.session_state.readings['f_previous'] == 0:
         last = get_last_readings(worksheet)
         if last:
@@ -103,7 +100,7 @@ if page == "📝 Nueva Lectura":
             st.session_state.readings['general_previous'] = last.get('general_current', 0)
             st.info(f"📌 Cargada lectura anterior: F={st.session_state.readings['f_previous']}, G={st.session_state.readings['g_previous']}")
     
-    # --- Departamento F ---
+    # --- DEPARTAMENTO F ---
     with st.expander("📸 Departamento F - Medidor", expanded=True):
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -152,7 +149,7 @@ if page == "📝 Nueva Lectura":
             else:
                 st.session_state.readings['f_current'] = f_current_manual
     
-    # --- Departamento G ---
+    # --- DEPARTAMENTO G ---
     with st.expander("📸 Departamento G - Medidor", expanded=True):
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -201,7 +198,7 @@ if page == "📝 Nueva Lectura":
             else:
                 st.session_state.readings['g_current'] = g_current_manual
     
-    # --- Medidor General y Boleta ---
+    # --- MEDIDOR GENERAL Y BOLETA ---
     with st.expander("📄 Medidor General y Boleta", expanded=True):
         col1, col2 = st.columns([1, 1])
         with col1:
@@ -261,19 +258,19 @@ if page == "📝 Nueva Lectura":
             )
             st.session_state.readings['total_bill'] = total_bill
     
-    # --- Calculate Button ---
+    # --- BOTÓN CALCULAR ---
     st.markdown("---")
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
         calculate_btn = st.button("🧮 Calcular y Generar Informe", use_container_width=True)
     
     if calculate_btn:
-        # Validate inputs
         f_cur = st.session_state.readings['f_current']
         g_cur = st.session_state.readings['g_current']
         gen_cur = st.session_state.readings['general_current']
         total = st.session_state.readings['total_bill']
         
+        # Validaciones
         if f_cur is None or f_cur == 0:
             st.error("❌ Ingresa la lectura del medidor F (actual).")
         elif g_cur is None or g_cur == 0:
@@ -283,7 +280,7 @@ if page == "📝 Nueva Lectura":
         elif total is None or total == 0:
             st.error("❌ Ingresa el monto total de la boleta.")
         else:
-            # Perform calculation
+            # Cálculo
             result = calculate_bill(
                 previous_reading_f=st.session_state.readings['f_previous'],
                 current_reading_f=f_cur,
@@ -295,7 +292,7 @@ if page == "📝 Nueva Lectura":
             )
             st.session_state.result = result
             
-            # Generate report
+            # Generar informe
             report = generate_report(result, {
                 'f_previous': st.session_state.readings['f_previous'],
                 'f_current': f_cur,
@@ -309,7 +306,7 @@ if page == "📝 Nueva Lectura":
             st.subheader("📋 Resultado")
             st.markdown(f"<div class='report-box'>{report}</div>", unsafe_allow_html=True)
             
-            # Save to Google Sheets
+            # Guardar en Google Sheets (si está conectado)
             if worksheet:
                 saved = save_reading(
                     worksheet,
@@ -322,18 +319,20 @@ if page == "📝 Nueva Lectura":
                 )
                 if saved:
                     st.success("✅ Guardado en Google Sheets")
-                    # Update previous values for next time
+                    # Actualizar valores anteriores para la próxima lectura
                     st.session_state.readings['f_previous'] = f_cur
                     st.session_state.readings['g_previous'] = g_cur
                     st.session_state.readings['general_previous'] = gen_cur
-                    # Clear current for next reading
+                    # Limpiar campos actuales
                     st.session_state.readings['f_current'] = None
                     st.session_state.readings['g_current'] = None
                     st.session_state.readings['general_current'] = None
                     st.session_state.readings['total_bill'] = None
                     st.rerun()
 
-# --- PAGE: Historial ---
+# ============================================
+# PÁGINA: HISTORIAL
+# ============================================
 elif page == "📜 Historial":
     st.title("📜 Historial de Lecturas")
     
@@ -341,7 +340,8 @@ elif page == "📜 Historial":
         df = get_history(worksheet, limit=30)
         if not df.empty:
             st.dataframe(df, use_container_width=True, height=400)
-            # Summary stats
+            
+            # Resumen estadístico
             st.subheader("📊 Resumen")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -355,7 +355,7 @@ elif page == "📜 Historial":
                 total_g = df["Costo G ($)"].sum() if "Costo G ($)" in df.columns else 0
                 st.metric("Total Pagado (F+G)", f"${(total_f + total_g):,.2f}")
             
-            # Download as CSV
+            # Botón para descargar CSV
             csv = df.to_csv(index=False)
             st.download_button(
                 label="⬇️ Descargar Historial (CSV)",
@@ -368,64 +368,35 @@ elif page == "📜 Historial":
     else:
         st.warning("⚠️ No se pudo conectar a Google Sheets. Los datos no se guardarán.")
 
-# --- PAGE: Configuración ---
+# ============================================
+# PÁGINA: CONFIGURACIÓN
+# ============================================
 else:
     st.title("⚙️ Configuración")
-    
     st.markdown("### 📌 Instrucciones de configuración")
-    st.markdown("Para que la app funcione correctamente, necesitas configurar:")
-    st.markdown("1. **Google Cloud Vision API** (para OCR)")
-    st.markdown("2. **Google Sheets API** (para guardar datos)")
-    st.markdown("")
-    
-    st.markdown("#### 🔑 Google Cloud Vision API")
-    st.markdown("1. Ve a [Google Cloud Console](https://console.cloud.google.com/)")
-    st.markdown("2. Crea un proyecto o selecciona uno existente")
-    st.markdown("3. Habilita la API de Cloud Vision")
-    st.markdown("4. Crea una clave de cuenta de servicio (JSON)")
-    st.markdown("5. Copia el contenido del JSON en los secrets de Streamlit como `GCP_CREDENTIALS`")
-    st.markdown("")
-    
-    st.markdown("#### 📊 Google Sheets API")
-    st.markdown("1. Habilita Google Sheets API en la misma consola")
-    st.markdown("2. Crea otra clave de cuenta de servicio o usa la misma")
-    st.markdown("3. Copia el JSON como `GSHEET_CREDENTIALS` en los secrets")
-    st.markdown("")
-    
-    st.markdown("#### 🚀 Despliegue en Streamlit Cloud")
-    st.markdown("1. Sube este código a GitHub")
-    st.markdown("2. Ve a [share.streamlit.io](https://share.streamlit.io/)")
-    st.markdown("3. Conecta tu repositorio y despliega")
-    st.markdown("4. Agrega los secrets en la sección de configuración")
-    st.markdown("")
+    st.markdown("""
+    - **OCR**: Se usa EasyOCR (gratuito, sin API externa).  
+    - **Almacenamiento**: Google Sheets (requiere credenciales en secrets).  
+    - **Credenciales**: Agrega `GSHEET_CREDENTIALS` en los secrets de Streamlit con el JSON de tu cuenta de servicio.
+    """)
     
     st.markdown("### 🔐 Secrets (ejemplo)")
     st.code("""
-{
-    "GCP_CREDENTIALS": { "type": "service_account", ... },
-    "GSHEET_CREDENTIALS": { "type": "service_account", ... }
-}
-    """, language="json")
+[GSHEET_CREDENTIALS]
+type = "service_account"
+project_id = "tu-proyecto"
+private_key_id = "xxx"
+private_key = "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+client_email = "xxx@xxx.iam.gserviceaccount.com"
+client_id = "xxx"
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/xxx"
+    """, language="toml")
     
-    st.markdown("### 📱 Uso desde el celular")
-    st.markdown("Abre la URL de la app en tu navegador móvil y funciona como una app nativa.")
-    
-    st.markdown("---")
-    st.subheader("📡 Estado de conexiones")
-    
+    st.markdown("### 📡 Estado de conexiones")
     if worksheet:
         st.success("✅ Google Sheets: Conectado")
     else:
         st.error("❌ Google Sheets: No conectado (configura los secrets)")
-    
-    # Test Vision API
-    try:
-        from utils.ocr import get_vision_client
-        client = get_vision_client()
-        if client:
-            st.success("✅ Google Cloud Vision API: Conectado")
-        else:
-            st.error("❌ Google Cloud Vision API: No conectado")
-    except:
-        st.error("❌ Google Cloud Vision API: Error de configuración")
-
