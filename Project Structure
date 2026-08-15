@@ -1,0 +1,10 @@
+electricity-billing-app/
+├── app.py                 # Main Streamlit app
+├── requirements.txt       # Python dependencies
+├── .streamlit/
+│   └── config.toml        # Streamlit config for mobile
+├── README.md              # Setup instructions
+└── utils/
+    ├── ocr.py             # OCR functions (Google Cloud Vision)
+    ├── calculations.py    # Billing logic
+    └── storage.py         # Google Sheets read/write
