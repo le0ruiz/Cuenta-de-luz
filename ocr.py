@@ -1,23 +1,22 @@
 import io
 import os
+import re
 from PIL import Image
 from google.cloud import vision
 from google.oauth2 import service_account
 import streamlit as st
-import re
 
-# Google Cloud Vision client (uses credentials from environment or secrets)
 def get_vision_client():
-    credentials = None
     if "GCP_CREDENTIALS" in st.secrets:
         creds_dict = st.secrets["GCP_CREDENTIALS"]
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
+        return vision.ImageAnnotatorClient(credentials=credentials)
     elif os.path.exists("credentials.json"):
         credentials = service_account.Credentials.from_service_account_file("credentials.json")
+        return vision.ImageAnnotatorClient(credentials=credentials)
     else:
-        st.warning("⚠️ Google Cloud Vision credentials not found. OCR will be disabled.")
+        st.warning("⚠️ Credenciales de Google Cloud Vision no encontradas. OCR desactivado.")
         return None
-    return vision.ImageAnnotatorClient(credentials=credentials)
 
 def extract_numbers_from_image(image_file):
     client = get_vision_client()
