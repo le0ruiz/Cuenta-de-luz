@@ -1,4 +1,3 @@
-import pandas as pd
 from datetime import datetime
 
 def calculate_bill(
@@ -11,12 +10,14 @@ def calculate_bill(
     consumption_g = current_reading_g - previous_reading_g if current_reading_g and previous_reading_g else 0
     total_consumption = consumption_f + consumption_g
     general_diff = current_general - previous_general if current_general and previous_general else 0
+
     if total_consumption > 0 and abs(total_consumption - general_diff) > 10:
         effective_total = total_consumption
         warning = "⚠️ La suma de consumos de departamentos no coincide con el medidor general. Se usará la suma de departamentos."
     else:
         effective_total = max(total_consumption, general_diff)
         warning = None
+
     if effective_total == 0 or total_bill_amount == 0:
         return {
             "consumption_f": consumption_f,
@@ -27,16 +28,19 @@ def calculate_bill(
             "total_bill": total_bill_amount,
             "warning": "No hay consumo o monto de boleta = 0."
         }
+
     cost_f = (consumption_f / effective_total) * total_bill_amount if effective_total > 0 else 0
     cost_g = (consumption_g / effective_total) * total_bill_amount if effective_total > 0 else 0
     cost_f = round(cost_f, 2)
     cost_g = round(cost_g, 2)
+
     diff = total_bill_amount - (cost_f + cost_g)
     if abs(diff) > 0.01:
         if cost_f >= cost_g:
             cost_f = round(cost_f + diff, 2)
         else:
             cost_g = round(cost_g + diff, 2)
+
     return {
         "consumption_f": consumption_f,
         "consumption_g": consumption_g,
