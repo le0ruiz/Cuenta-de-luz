@@ -428,3 +428,4 @@ else:
             st.error("❌ Google Cloud Vision API: No conectado")
     except:
         st.error("❌ Google Cloud Vision API: Error de configuración")
+
